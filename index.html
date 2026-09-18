@@ -37,6 +37,9 @@
     --on-accent: #F7FBFF;
     --accent-soft: rgba(10, 123, 208, 0.09);
     --accent-line: rgba(10, 123, 208, 0.28);
+    --warn: #A5530A;
+    --knob: #FDFEFF;
+    --scrim: rgba(8, 14, 26, 0.34);
     --tabbar-bg: rgba(241, 244, 248, 0.82);
     --shadow: 0 1px 0 rgba(14, 23, 38, 0.03), 0 10px 26px -16px rgba(14, 40, 80, 0.22);
     --glow: 0 22px 44px -20px rgba(10, 123, 208, 0.6);
@@ -74,6 +77,9 @@
       --on-accent: #F7FBFF;
       --accent-soft: rgba(30, 150, 230, 0.15);
       --accent-line: rgba(40, 160, 235, 0.45);
+      --warn: #F2A94A;
+      --knob: #F4F7FB;
+      --scrim: rgba(0, 0, 0, 0.55);
       --tabbar-bg: rgba(10, 14, 20, 0.78);
       --shadow: 0 0 0 0 transparent;
       --glow: 0 22px 50px -22px rgba(20, 140, 220, 0.7);
@@ -131,6 +137,29 @@
 
   /* ------------------------------ Timer ------------------------------ */
   .panel-timer { display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+
+  .timer-top {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .timer-top .ctx { justify-self: center; }
+  .bell {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--muted);
+    transition: transform 160ms var(--ease-out), color 240ms ease;
+  }
+  .bell:active { transform: scale(0.92); }
+  .bell svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .bell.is-on { color: var(--accent-ink); }
 
   .ctx {
     display: inline-flex;
@@ -247,7 +276,24 @@
   }
   .is-idle .status { color: var(--on-accent); opacity: 0.88; }
 
-  .vib-slot { flex: none; width: 100%; height: 58px; margin-bottom: 4px; }
+  .vib-slot { flex: none; display: grid; width: 100%; height: 58px; margin-bottom: 4px; }
+  .vib-slot > * { grid-area: 1 / 1; }
+  .note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--muted);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 180ms ease-out, transform 180ms ease-out, color 200ms ease;
+  }
+  .note svg { width: 17px; height: 17px; flex: none; fill: none; stroke: var(--accent-ink); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .note.is-shown { opacity: 1; transform: none; transition: opacity 280ms var(--ease-out) 150ms, transform 380ms var(--ease-out) 150ms; }
+  .note.is-warn { color: var(--warn); }
+  .note.is-warn svg { stroke: var(--warn); }
   .vib {
     display: flex;
     align-items: center;
@@ -264,13 +310,14 @@
     pointer-events: none;
     transition: opacity 150ms ease-out, transform 150ms ease-out;
   }
-  .is-done .vib {
+  /* Der Button ist nur der Rückfall, wenn keine ntfy-Mitteilung geplant werden konnte */
+  .is-done:not(.push-ok) .vib {
     opacity: 1;
     transform: none;
     pointer-events: auto;
     transition: opacity 260ms var(--ease-out) 120ms, transform 380ms var(--ease-out) 120ms;
   }
-  .is-done .vib:active { transform: scale(0.97); transition: transform 140ms var(--ease-out); }
+  .is-done:not(.push-ok) .vib:active { transform: scale(0.97); transition: transform 140ms var(--ease-out); }
 
   /* ---------------------------- Trainingsplan ---------------------------- */
   .cycle { display: flex; gap: 4px; }
@@ -575,10 +622,133 @@
     font-weight: 700;
   }
 
+  /* ------------------------ Einstellungen (Sheet) ------------------------ */
+  .scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: var(--scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+  .sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 31;
+    display: grid;
+    gap: 16px;
+    padding: 8px 20px calc(var(--safe-bottom) + 20px);
+    border-radius: 28px 28px 0 0;
+    background: var(--surface);
+    box-shadow: 0 -24px 60px -24px rgba(0, 0, 0, 0.4);
+    transform: translateY(105%);
+    transition: transform 260ms var(--ease-out);
+  }
+  .sheet-open .scrim { opacity: 1; pointer-events: auto; transition-duration: 300ms; }
+  .sheet-open .sheet { transform: none; transition: transform 460ms var(--ease-drawer); }
+  .grab { display: grid; place-items: center; height: 18px; }
+  .grab span { width: 38px; height: 5px; border-radius: 3px; background: var(--line); }
+  .sheet-head { display: flex; align-items: center; gap: 12px; }
+  .sheet-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--grad);
+    color: var(--on-accent);
+  }
+  .sheet-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .sheet-title { font-size: 21px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; }
+  .sheet-text { font-size: 15px; color: var(--muted); line-height: 1.4; }
+
+  .setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 56px;
+    padding: 0 14px 0 16px;
+    border-radius: 16px;
+    background: var(--bg);
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .switch {
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    flex: none;
+    width: 51px;
+    height: 31px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: background-color 220ms ease;
+  }
+  .switch::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    background: var(--knob);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: transform 300ms var(--ease-out);
+  }
+  .switch:checked { background: var(--accent); }
+  .switch:checked::before { transform: translateX(20px); }
+
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 14px; font-weight: 600; color: var(--muted); padding-left: 2px; }
+  .field input {
+    width: 100%;
+    height: 52px;
+    padding: 0 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 16px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 500 17px/1 ui-monospace, "SF Mono", Menlo, monospace;
+    -webkit-user-select: text;
+    user-select: text;
+    transition: border-color 180ms ease;
+  }
+  .field input:focus { border-color: var(--accent); outline: none; }
+  .field.is-invalid input { border-color: var(--warn); }
+  .help { font-size: 13px; color: var(--muted); padding-left: 2px; }
+  .field.is-invalid .help { color: var(--warn); }
+  .is-disabled { opacity: 0.45; pointer-events: none; transition: opacity 200ms ease; }
+
+  .sheet-actions { display: grid; gap: 10px; margin-top: 4px; }
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 54px;
+    border-radius: 999px;
+    font-size: 17px;
+    font-weight: 650;
+  }
+  .btn-soft { background: var(--accent-soft); color: var(--accent-ink); }
+  .btn-main { background: var(--grad); color: var(--on-accent); }
+  .btn[disabled] { opacity: 0.55; }
+  .test-status { min-height: 20px; font-size: 14px; text-align: center; color: var(--muted); }
+  .test-status.is-warn { color: var(--warn); }
+
   /* Weniger Bewegung: Positionsanimationen raus, Farb- und Deckkraftwechsel bleiben */
   @media (prefers-reduced-motion: reduce) {
-    .press:active, .icon-btn:active, .day:active, .tab:active svg, .dial:active .disc, .is-done .vib:active { transform: none; }
-    .vib, .is-done .vib, .toast, .toast.is-visible, .big > *, .complete > span { transform: none !important; }
+    .press:active, .icon-btn:active, .day:active, .tab:active svg, .dial:active .disc, .is-done:not(.push-ok) .vib:active, .bell:active { transform: none; }
+    .vib, .is-done:not(.push-ok) .vib, .toast, .toast.is-visible, .big > *, .complete > span, .note, .note.is-shown { transform: none !important; }
+    .sheet, .sheet-open .sheet { transition: opacity 200ms ease; }
+    .sheet { opacity: 0; } .sheet-open .sheet { opacity: 1; transform: none; }
     .tab-ind, .progress span { transition: none; }
     .box svg, .ex input:checked + .box svg { transition: none; }
   }
@@ -589,10 +759,16 @@
 
   <!-- =========================== Timer =========================== -->
   <section class="panel panel-timer is-active is-idle" id="panel-timer" role="tabpanel" aria-labelledby="tab-timer">
-    <button class="ctx press" id="ctx" type="button" aria-label="Zum Trainingsplan">
-      <span class="ctx-day" id="ctx-day">Tag 1 <span>· Torso</span></span>
-      <span class="segs" id="ctx-segs" aria-hidden="true"></span>
-    </button>
+    <div class="timer-top">
+      <span aria-hidden="true"></span>
+      <button class="ctx press" id="ctx" type="button" aria-label="Zum Trainingsplan">
+        <span class="ctx-day" id="ctx-day">Tag 1 <span>· Torso</span></span>
+        <span class="segs" id="ctx-segs" aria-hidden="true"></span>
+      </button>
+      <button class="bell" id="open-sheet" type="button" aria-label="Mitteilung bei 0:00 einstellen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+      </button>
+    </div>
 
     <div class="stage">
       <button class="dial" id="start" type="button" aria-label="Pause starten">
@@ -621,6 +797,10 @@
     </div>
 
     <div class="vib-slot">
+      <p class="note" id="push-note" aria-live="polite">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+        <span id="push-note-text"></span>
+      </p>
       <a class="vib" id="vib" href="#" aria-hidden="true" tabindex="-1">🔔 Vibrieren auslösen</a>
     </div>
   </section>
@@ -701,6 +881,35 @@
     </button>
   </nav>
 
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+  <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true" inert>
+    <div class="grab" aria-hidden="true"><span></span></div>
+    <div class="sheet-head">
+      <span class="sheet-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+      </span>
+      <h2 class="sheet-title" id="sheet-title">Mitteilung bei 0:00</h2>
+    </div>
+    <p class="sheet-text">Kommt über die ntfy-App als kurzes Banner mit Vibration, auch wenn du gerade etwas anderes machst oder das iPhone gesperrt ist.</p>
+
+    <label class="setting" for="push-enabled">
+      <span>Mitteilung senden</span>
+      <input class="switch" id="push-enabled" type="checkbox">
+    </label>
+
+    <div class="field" id="topic-field">
+      <label for="push-topic">ntfy-Kanal</label>
+      <input id="push-topic" type="text" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+      <p class="help" id="topic-help">Muss genau so heißen wie der abonnierte Kanal in der ntfy-App.</p>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-soft press" id="push-test" type="button">Testnachricht senden</button>
+      <p class="test-status" id="test-status" aria-live="polite"></p>
+      <button class="btn btn-main press" id="sheet-done" type="button">Fertig</button>
+    </div>
+  </section>
+
   <div class="toast" id="toast" role="status" aria-live="polite" aria-hidden="true">
     <span class="toast-msg" id="toast-msg"></span>
     <button class="toast-btn press" id="toast-btn" type="button" tabindex="-1">Rückgängig</button>
@@ -717,7 +926,9 @@
      Konfiguration: hier anpassen
      ================================================================= */
   const REST_SECONDS = 180;                                     // Pausenlänge (3 Minuten)
-  const SHORTCUT_URL = 'shortcuts://run-shortcut?name=Vibrieren'; // iOS-Kurzbefehl bei 0:00
+  const SHORTCUT_URL = 'shortcuts://run-shortcut?name=Vibrieren'; // Rückfall, wenn ntfy nicht erreichbar ist
+  const NTFY_SERVER = 'https://ntfy.sh';
+  const NTFY_TOPIC = 'gym-pause-ft6455';                         // Kanal, den die ntfy-App abonniert hat
   const SETS_PER_EXERCISE = 3;
 
   const WORKOUTS = {
@@ -735,9 +946,14 @@
      Zustand + localStorage
      ================================================================= */
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const TOPIC_RE = /^[-_A-Za-z0-9]{1,64}$/;
 
   function loadState() {
-    const s = { rotation: 1, checks: [], checksFor: 1, log: [], timerEnd: null, firedFor: null };
+    const s = {
+      rotation: 1, checks: [], checksFor: 1, log: [], timerEnd: null, firedFor: null,
+      ntfy: { enabled: true, topic: NTFY_TOPIC },
+      push: null, // { end, seq, ok } für die aktuell geplante Mitteilung
+    };
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (_) { raw = null; }
     if (!raw || typeof raw !== 'object') return s;
@@ -761,6 +977,16 @@
 
     if (typeof raw.timerEnd === 'number' && isFinite(raw.timerEnd)) s.timerEnd = raw.timerEnd;
     if (typeof raw.firedFor === 'number') s.firedFor = raw.firedFor;
+
+    if (raw.ntfy && typeof raw.ntfy === 'object') {
+      s.ntfy.enabled = raw.ntfy.enabled !== false;
+      if (typeof raw.ntfy.topic === 'string' && TOPIC_RE.test(raw.ntfy.topic)) s.ntfy.topic = raw.ntfy.topic;
+    }
+    const p = raw.push;
+    if (p && typeof p.end === 'number' && typeof p.seq === 'string') {
+      // Eine Anfrage, die beim Schließen der App noch lief, gilt als unsicher: dann bleibt der Rückfall-Button aktiv
+      s.push = { end: p.end, seq: p.seq, ok: p.ok === true };
+    }
     return s;
   }
 
@@ -892,10 +1118,9 @@
     timerPanel.classList.toggle('is-done', m === 'done');
     statusEl.textContent = m === 'running' ? 'Tippen für Neustart' : m === 'done' ? 'Pause vorbei' : `${fmtTime(TOTAL_MS)} Pause`;
     dial.setAttribute('aria-label', m === 'idle' ? 'Pause starten' : 'Pause neu starten');
-    vibBtn.setAttribute('aria-hidden', String(m !== 'done'));
-    vibBtn.tabIndex = m === 'done' ? 0 : -1;
     shownText = '';
     if (m !== 'running') tabTimerLabel.textContent = 'Timer';
+    renderPushNote();
   }
 
   function ripple(times) {
@@ -942,6 +1167,7 @@
     refill = !reduceMotion() && from < 0.995 ? { from, t0: Date.now() } : null;
     setMode('running');
     ripple(1);
+    schedulePush();
     requestWakeLock();
     cancelAnimationFrame(raf);
     scheduleEnd();
@@ -960,7 +1186,8 @@
     if (live && state.firedFor !== state.timerEnd) {
       state.firedFor = state.timerEnd;
       save();
-      triggerShortcut();
+      // Kommt die Mitteilung über ntfy, bleibt die App ruhig. Sonst Kurzbefehl als Rückfall.
+      if (!pushCovers()) triggerShortcut();
     }
   }
 
@@ -1011,6 +1238,216 @@
 
   dial.addEventListener('click', start);
   vibBtn.addEventListener('click', () => haptic());
+
+  /* =================================================================
+     ntfy: Mitteilung bei 0:00, auch wenn die App im Hintergrund ist
+     ================================================================= */
+  const noteEl = $('push-note');
+  const noteText = $('push-note-text');
+  const bellBtn = $('open-sheet');
+  const fmtClock = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
+  let rescheduleTimer = 0;
+
+  const pushOn = () => state.ntfy.enabled && TOPIC_RE.test(state.ntfy.topic);
+  const currentPush = () => (state.push && state.push.end === state.timerEnd ? state.push : null);
+  const pushCovers = () => { const p = currentPush(); return !!(p && p.ok === true); };
+
+  // Einfache Anfragen (Text-Body, Parameter in der URL), damit der Browser keine Vorab-Anfrage braucht
+  async function ntfy(path, { method = 'POST', body, params } = {}) {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const qs = params ? `?${new URLSearchParams(params)}` : '';
+      const res = await fetch(`${NTFY_SERVER}/${encodeURIComponent(state.ntfy.topic)}${path}${qs}`,
+        { method, body, cache: 'no-store', signal: ctrl.signal });
+      return res.ok;
+    } catch (_) {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  // Inhalt des Banners: Titel "⏱ Pause vorbei", darunter die nächste Übung
+  function pushContent() {
+    const w = workoutFor(state.rotation);
+    const done = w.exercises.filter(n => state.checks.includes(n)).length;
+    const next = w.exercises.find(n => !state.checks.includes(n));
+    const body = next
+      ? `Nächster Satz: ${next}\n${done} von ${w.exercises.length} Übungen erledigt`
+      : `Alle ${w.exercises.length} Übungen erledigt.\nZeit, das Training abzuschließen.`;
+    return { body, params: { title: 'Pause vorbei', tags: 'stopwatch', priority: '4' } };
+  }
+
+  function cancelPendingPush() {
+    const prev = state.push;
+    // Nur löschen, was noch nicht zugestellt wurde. Gleiche Kennung ersetzt bei ntfy nicht, daher explizit löschen.
+    if (prev && prev.end > Date.now() + 500) ntfy(`/${prev.seq}/delete`, { method: 'GET' });
+    state.push = null;
+  }
+
+  async function schedulePush() {
+    const end = state.timerEnd;
+    const keepOk = !!(state.push && state.push.end === end && state.push.ok);
+    cancelPendingPush();
+    if (!pushOn() || !end || end - Date.now() < 11000) { save(); renderPushNote(); return; }
+
+    const seq = `p${Date.now().toString(36)}`;
+    state.push = { end, seq, ok: keepOk ? true : null };
+    save();
+    renderPushNote();
+
+    const { body, params } = pushContent();
+    params.delay = `${Math.round((end - Date.now()) / 1000)}s`;
+    const ok = await ntfy(`/${seq}`, { body, params });
+    if (state.push && state.push.seq === seq) {
+      state.push.ok = ok;
+      save();
+      renderPushNote();
+    }
+  }
+
+  // Haken während der Pause: Banner mit der richtigen nächsten Übung neu planen
+  function refreshPushContent() {
+    if (mode !== 'running' || !pushOn()) return;
+    clearTimeout(rescheduleTimer);
+    rescheduleTimer = setTimeout(schedulePush, 1200);
+  }
+
+  function renderPushNote() {
+    const p = currentPush();
+    const ok = !!(p && p.ok);
+    timerPanel.classList.toggle('push-ok', ok);
+    bellBtn.classList.toggle('is-on', pushOn());
+
+    let text = '';
+    if (mode === 'running' && p) {
+      text = p.ok === null ? 'Mitteilung wird geplant'
+        : p.ok ? `Mitteilung kommt um ${fmtClock.format(new Date(p.end))}`
+        : 'Keine Verbindung. Mitteilung nicht geplant.';
+    }
+    if (text) noteText.textContent = text;
+    noteEl.classList.toggle('is-shown', !!text);
+    noteEl.classList.toggle('is-warn', !!(p && p.ok === false));
+
+    const showVib = mode === 'done' && !ok;
+    vibBtn.setAttribute('aria-hidden', String(!showVib));
+    vibBtn.tabIndex = showVib ? 0 : -1;
+  }
+
+  /* ---------- Einstellungen ---------- */
+  const appEl = document.querySelector('.app');
+  const sheet = $('sheet');
+  const pushToggle = $('push-enabled');
+  const topicInput = $('push-topic');
+  const topicField = $('topic-field');
+  const topicHelp = $('topic-help');
+  const testBtn = $('push-test');
+  const testStatus = $('test-status');
+  const TOPIC_HELP = topicHelp.textContent;
+
+  function syncSheet() {
+    pushToggle.checked = state.ntfy.enabled;
+    topicInput.value = state.ntfy.topic;
+    topicField.classList.remove('is-invalid');
+    topicHelp.textContent = TOPIC_HELP;
+    [topicField, testBtn].forEach(el => el.classList.toggle('is-disabled', !state.ntfy.enabled));
+  }
+
+  function openSheet() {
+    haptic();
+    syncSheet();
+    testStatus.textContent = '';
+    appEl.classList.add('sheet-open');
+    sheet.inert = false;
+    sheet.setAttribute('aria-hidden', 'false');
+    Object.values(panels).forEach(p => { p.inert = true; });
+  }
+
+  function closeSheet() {
+    topicInput.blur();
+    applyTopic();
+    appEl.classList.remove('sheet-open');
+    sheet.inert = true;
+    sheet.setAttribute('aria-hidden', 'true');
+    sheet.style.transform = '';
+    Object.entries(panels).forEach(([k, p]) => { p.inert = k !== activeTab; });
+    renderPushNote();
+  }
+
+  function applyTopic() {
+    const value = topicInput.value.trim();
+    if (value === state.ntfy.topic) return true;
+    if (!TOPIC_RE.test(value)) {
+      topicField.classList.add('is-invalid');
+      topicHelp.textContent = 'Nur Buchstaben, Zahlen, - und _ (höchstens 64 Zeichen).';
+      topicInput.value = state.ntfy.topic;
+      return false;
+    }
+    cancelPendingPush();
+    state.ntfy.topic = value;
+    save();
+    if (mode === 'running') schedulePush();
+    return true;
+  }
+
+  bellBtn.addEventListener('click', openSheet);
+  $('scrim').addEventListener('click', closeSheet);
+  $('sheet-done').addEventListener('click', closeSheet);
+
+  pushToggle.addEventListener('change', () => {
+    haptic();
+    state.ntfy.enabled = pushToggle.checked;
+    save();
+    syncSheet();
+    if (mode === 'running') schedulePush(); // plant neu oder löscht die offene Mitteilung
+    renderPushNote();
+  });
+
+  topicInput.addEventListener('input', () => {
+    const ok = TOPIC_RE.test(topicInput.value.trim());
+    topicField.classList.toggle('is-invalid', !ok && topicInput.value.trim() !== '');
+    topicHelp.textContent = ok || topicInput.value.trim() === '' ? TOPIC_HELP : 'Nur Buchstaben, Zahlen, - und _ (höchstens 64 Zeichen).';
+  });
+  topicInput.addEventListener('change', applyTopic);
+  topicInput.addEventListener('keydown', e => { if (e.key === 'Enter') topicInput.blur(); });
+
+  testBtn.addEventListener('click', async () => {
+    haptic();
+    if (!applyTopic()) return;
+    testBtn.disabled = true;
+    testStatus.classList.remove('is-warn');
+    testStatus.textContent = 'Wird gesendet';
+    const { body, params } = pushContent();
+    const ok = await ntfy('', { body, params });
+    testBtn.disabled = false;
+    testStatus.classList.toggle('is-warn', !ok);
+    testStatus.textContent = ok
+      ? 'Gesendet. Das Banner sollte gleich erscheinen.'
+      : 'Senden fehlgeschlagen. Prüf die Internetverbindung.';
+  });
+
+  // Sheet nach unten wegwischen
+  let drag = null;
+  sheet.addEventListener('touchstart', e => {
+    if (e.target.closest('input, button, label')) return;
+    drag = { y: e.touches[0].clientY, t: Date.now(), dy: 0 };
+    sheet.style.transition = 'none';
+  }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (!drag) return;
+    drag.dy = e.touches[0].clientY - drag.y;
+    const d = drag.dy < 0 ? drag.dy * 0.15 : drag.dy; // nach oben nur mit Widerstand
+    sheet.style.transform = `translateY(${d}px)`;
+  }, { passive: true });
+  sheet.addEventListener('touchend', () => {
+    if (!drag) return;
+    const velocity = drag.dy / Math.max(1, Date.now() - drag.t);
+    sheet.style.transition = '';
+    if (drag.dy > 110 || velocity > 0.5) closeSheet();
+    else sheet.style.transform = '';
+    drag = null;
+  });
 
   /* =================================================================
      Trainingsplan
@@ -1083,6 +1520,7 @@
         { duration: 380, easing: EASE_OUT });
     }
     renderProgress(false);
+    refreshPushContent();
   });
 
   completeBtn.addEventListener('click', () => {
@@ -1110,6 +1548,7 @@
       renderPlan(true);
     }, 900);
     renderJournal();
+    refreshPushContent();
 
     showToast(`Tag ${doneDay} eingetragen. Weiter mit Tag ${state.rotation}, ${workoutFor(state.rotation).name}.`, () => {
       clearTimeout(savedTimer);
@@ -1118,6 +1557,7 @@
       save();
       renderPlan(true);
       renderJournal();
+      refreshPushContent();
     });
   });
 
